@@ -12,7 +12,6 @@ class Consumer(threading.Thread):
         while True:
             item = self.url_queue.get()
 
-            # Check for sentinel value
             if item is None:
                 break
 
@@ -24,7 +23,6 @@ class Consumer(threading.Thread):
         soup = BeautifulSoup(content, 'html.parser')
         links = {a['href'] for a in soup.find_all('a', href=True) if
                  not a['href'].startswith('#')}
-        # Joining base URL with relative paths
         full_links = {urljoin(base_url, link) for link in links}
         return full_links
 
@@ -40,10 +38,8 @@ class Consumer(threading.Thread):
 
 
 if __name__ == "__main__":
-    # Example usage for testing
     from queue import Queue
     q = Queue()
-    # Simulated content for the test
     q.put(("https://qmplus.qmul.ac.uk", "<html><body><a href='https://www.link1.com'>Link1</a></body></html>"))
 
     consumer = Consumer(q, "output_links.txt")

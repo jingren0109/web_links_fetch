@@ -10,6 +10,7 @@ class Producer(threading.Thread):
         self.url_queue = url_queue
         self.urls = urls
         self.max_retries = 3
+        self.errors = []
 
     def run(self):
         for url in self.urls:
@@ -18,12 +19,14 @@ class Producer(threading.Thread):
                 try:
                     content = self.fetch_content(url)
                     self.url_queue.put((url, content))
-                    break  # Content fetched successfully, break out of the retry loop
+                    break
                 except Exception as e:
                     retries += 1
+                    self.errors.append(f"Error fetching content from {url} (Attempt {retries}): {e}")
                     print(f"Error fetching content from {url} (Attempt {retries}): {e}")
-                    time.sleep(2 ** retries)  # Exponential backoff
+                    time.sleep(2 ** retries)
             else:
+                self.errors.append(f"Failed to fetch content from {url} after {self.max_retries} attempts.")
                 print(f"Failed to fetch content from {url} after {self.max_retries} attempts.")
 
         self.url_queue.put(None)
@@ -31,12 +34,11 @@ class Producer(threading.Thread):
 
     def fetch_content(self, url):
         response = requests.get(url)
-        response.raise_for_status()  # will raise an HTTPError if the HTTP request returned an unsuccessful status code
+        response.raise_for_status()
         return response.text
 
 
 if __name__ == "__main__":
-    # Example usage for testing
     from queue import Queue
     urls = ["https://qmplus.qmul.ac.uk", "https://www.greatfrontend.com/front-end-interview-guidebook"]
     q = Queue()
@@ -44,7 +46,10 @@ if __name__ == "__main__":
     producer.start()
     producer.join()
 
-    # Printing the contents from the queue for testing
-    while not q.empty():
-        url, content = q.get()
+    while True:
+        item = q.get()
+        if item is None:
+            break
+        url, content = item
         print(f"Content from {url} fetched!")
+
